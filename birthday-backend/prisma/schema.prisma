@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  token    String @unique @default(uuid()) @db.Uuid
+  nickname String @db.VarChar(20)
+
+  // 카카오 로그인용 (지금은 anonymous, 연동 시 채워짐)
+  authProvider    AuthProvider @default(anonymous)
+  kakaoId         String?      @unique @db.VarChar(64)
+  email           String?      @db.VarChar(255)
+  profileImageUrl String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  hostedPages Page[]    @relation("PageHost")
+  messages    Message[] @relation("MessageAuthor")
+}
+
+enum AuthProvider {
+  anonymous
+  kakao
+}
+
+model Page {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique @db.VarChar(6)
+  hostId     Int
+  friendName String   @db.VarChar(20)
+  birthday   DateTime @db.Date
+  greeting   String   @db.VarChar(60)
+  color      String   @db.Char(7)
+  photoUrl   String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  host     User      @relation("PageHost", fields: [hostId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([hostId])
+}
+
+model Message {
+  id        Int     @id @default(autoincrement())
+  pageId    Int
+  authorId  Int
+  content   String  @db.Text
+  photoUrl  String?
+  cardColor String? @db.Char(7)
+
+  createdAt DateTime  @default(now()) @db.Timestamptz
+  updatedAt DateTime  @updatedAt @db.Timestamptz
+  deletedAt DateTime? @db.Timestamptz
+
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author User @relation("MessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, createdAt(sort: Desc)])
+}
