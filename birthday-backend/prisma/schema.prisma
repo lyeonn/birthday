@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -11,6 +10,7 @@ model User {
   id       Int    @id @default(autoincrement())
   token    String @unique @default(uuid()) @db.Uuid
   nickname String @db.VarChar(20)
+  pin      String @db.VarChar(4) // 4자리 PIN (평문) — 카카오 로그인 붙기 전 임시 식별자
 
   // 카카오 로그인용 (지금은 anonymous, 연동 시 채워짐)
   authProvider    AuthProvider @default(anonymous)
@@ -23,6 +23,8 @@ model User {
 
   hostedPages Page[]    @relation("PageHost")
   messages    Message[] @relation("MessageAuthor")
+
+  @@unique([nickname, pin]) // (닉네임, PIN) 조합이 user 식별자
 }
 
 enum AuthProvider {

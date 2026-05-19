@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,9 @@ import StepGreeting from './StepGreeting';
 import StepColor from './StepColor';
 import StepReview from './StepReview';
 import CreatedView from './CreatedView';
+
+// TODO: 환경변수로 빼기 (NEXT_PUBLIC_API_URL)
+const API_BASE = 'http://localhost:3001';
 
 const STEPS = [
   {
@@ -34,21 +37,10 @@ const STEPS = [
   },
 ];
 
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function generateMockCode(): string {
-  let s = '';
-  let n = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-  for (let i = 0; i < 6; i++) {
-    s += CODE_CHARS[n % CODE_CHARS.length];
-    n = Math.floor(n / CODE_CHARS.length) + (i + 1) * 17;
-  }
-  return s;
-}
-
-async function mockIssueCode(): Promise<{ code: string }> {
-  await new Promise((r) => setTimeout(r, 500));
-  return { code: generateMockCode() };
+interface StoredUser {
+  id: number;
+  nickname: string;
+  token: string;
 }
 
 export default function CreateWizard() {
@@ -56,6 +48,7 @@ export default function CreateWizard() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const methods = useForm<CreatePageInput>({
     resolver: zodResolver(createPageSchema),
@@ -68,6 +61,12 @@ export default function CreateWizard() {
     },
   });
 
+  // 마운트 시 user 정보 없으면 /start로
+  useEffect(() => {
+    const raw = localStorage.getItem('birthday-user');
+    if (!raw) router.replace('/start');
+  }, [router]);
+
   const total = STEPS.length;
   const isLast = step === total - 1;
   const values = methods.watch();
@@ -75,7 +74,10 @@ export default function CreateWizard() {
   const isStepValid = (() => {
     switch (step) {
       case 0:
-        return values.friendName.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(values.birthday);
+        return (
+          values.friendName.trim().length > 0 &&
+          /^\d{4}-\d{2}-\d{2}$/.test(values.birthday)
+        );
       case 1:
         return values.greeting.trim().length >= 2;
       case 2:
@@ -98,10 +100,40 @@ export default function CreateWizard() {
       return;
     }
 
+    // 마지막 단계 → 진짜 API 호출
     setSubmitting(true);
+    setSubmitError(null);
     try {
-      const { code } = await mockIssueCode();
-      setCreatedCode(code);
+      const raw = localStorage.getItem('birthday-user');
+      if (!raw) {
+        router.replace('/start');
+        return;
+      }
+      const user = JSON.parse(raw) as StoredUser;
+      const v = methods.getValues();
+
+      const res = await fetch(`${API_BASE}/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostId: user.id,
+          friendName: v.friendName,
+          birthday: v.birthday,
+          greeting: v.greeting,
+          color: v.color,
+          photoUrl: v.photoUrl,
+        }),
+      });
+
+      if (!res.ok) {
+        setSubmitError('페이지 생성에 실패했어요. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+
+      const page = await res.json();
+      setCreatedCode(page.code);
+    } catch {
+      setSubmitError('네트워크 오류. 백엔드 서버(3001)가 켜져있는지 확인해주세요.');
     } finally {
       setSubmitting(false);
     }
@@ -184,6 +216,11 @@ export default function CreateWizard() {
         {/* Bottom CTA */}
         <div className="fixed inset-x-0 bottom-0 z-[5] bg-gradient-to-b from-transparent to-bg to-[40%] px-5 pb-6 pt-4">
           <div className="mx-auto max-w-[480px]">
+            {submitError && (
+              <div className="mb-2 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-[12px] leading-[1.4] text-[#991B1B]">
+                {submitError}
+              </div>
+            )}
             <button
               type="button"
               onClick={handleNext}
