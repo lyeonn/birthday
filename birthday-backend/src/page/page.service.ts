@@ -49,11 +49,26 @@ export class PageService {
     });
   }
 
-  // 공유 코드로 페이지 조회 — 없으면 404
+  // 공유 코드로 페이지 조회 — 메인 화면에 필요한 정보 한 번에 반환
   async findByCode(code: string) {
-    const page = await this.prisma.page.findUnique({ where: { code } });
+    const page = await this.prisma.page.findUnique({
+      where: { code },
+      select: {
+        id: true,
+        code: true,
+        friendName: true,
+        birthday: true,
+        greeting: true,
+        color: true,
+        photoUrl: true,
+        createdAt: true,
+        host: { select: { nickname: true } }, // MADE BY 카드용
+      },
+    });
     if (!page) throw new NotFoundException(`Page not found: ${code}`);
-    return page;
+    // host.nickname을 평탄화해서 hostNickname으로 노출
+    const { host, ...rest } = page;
+    return { ...rest, hostNickname: host.nickname };
   }
 
   // 랜덤 6자 코드 생성

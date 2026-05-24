@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // TODO: 환경변수로 빼기 (NEXT_PUBLIC_API_URL)
 const API_BASE = 'http://localhost:3001';
@@ -10,6 +10,10 @@ type Mode = 'register' | 'login';
 
 export default function StartPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // ?redirect=/some/path 으로 들어오면 가입 후 그 경로로 보냄. 없으면 /my-pages.
+  const redirectTo = searchParams?.get('redirect') ?? '/my-pages';
+
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
   const [mode, setMode] = useState<Mode>('register');
@@ -53,7 +57,7 @@ export default function StartPage() {
       const user = await res.json();
       // 토큰 + user 정보를 localStorage에 저장 → my-pages/CreateWizard에서 사용
       localStorage.setItem('birthday-user', JSON.stringify(user));
-      router.push('/my-pages');
+      router.push(redirectTo);
     } catch {
       setErrorMsg('네트워크 오류. 백엔드 서버(3001)가 켜져있는지 확인해주세요.');
     } finally {
