@@ -6,18 +6,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { randomUUID } from 'node:crypto';
-import { extname } from 'node:path';
+import { memoryStorage } from 'multer';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
-// 업로드된 파일을 birthday-backend/uploads/에 저장
-const storage = diskStorage({
-  destination: './uploads',
-  filename: (_req, file, cb) => {
-    const ext = extname(file.originalname).toLowerCase();
-    cb(null, `${randomUUID()}${ext}`);
-  },
-});
+// CLOUDINARY_URL 환경변수 자동 인식 (cloudinary://API_KEY:API_SECRET@CLOUD_NAME 형식)
+cloudinary.config({ secure: true });
 
 @Controller('upload')
 export class UploadController {
@@ -25,10 +18,9 @@ export class UploadController {
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
-      storage,
+      storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
       fileFilter: (_req, file, cb) => {
-        // 이미지만 허용
         if (!file.mimetype.startsWith('image/')) {
           cb(new BadRequestException('이미지 파일만 업로드할 수 있어요'), false);
           return;
@@ -37,10 +29,20 @@ export class UploadController {
       },
     }),
   )
-  upload(@UploadedFile() file: Express.Multer.File) {
+  async upload(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('파일이 없어요');
-    // 프론트에서 사용할 절대 URL 반환
-    const url = `http://localhost:3001/uploads/${file.filename}`;
-    return { url };
+
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'birthday', resource_type: 'image' },
+        (err, res) => {
+          if (err || !res) return reject(err ?? new Error('업로드 실패'));
+          resolve(res);
+        },
+      );
+      stream.end(file.buffer);
+    });
+
+    return { url: result.secure_url };
   }
 }

@@ -11,10 +11,11 @@ export interface MessagePreview {
 interface Props {
   messages: MessagePreview[]; // 3개까지만 미리보기
   onSeeAll?: () => void;
+  onWrite?: () => void;
 }
 
 // 친구들의 축하글 큰 블록. 섹션 헤더 + 카드 3개 (3줄 클램프) + 더보기 버튼.
-export default function MessagesSection({ messages, onSeeAll }: Props) {
+export default function MessagesSection({ messages, onSeeAll, onWrite }: Props) {
   const previews = messages.slice(0, 3);
 
   return (
@@ -43,6 +44,15 @@ export default function MessagesSection({ messages, onSeeAll }: Props) {
               <br />
               첫 번째 축하의 주인공이 되어보세요
             </p>
+            {onWrite && (
+              <button
+                type="button"
+                onClick={onWrite}
+                className="mt-4 h-11 w-full rounded-chip bg-ink text-[13px] font-semibold text-white"
+              >
+                축하글 쓰러 가기
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">

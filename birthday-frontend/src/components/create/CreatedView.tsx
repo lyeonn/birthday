@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFormContext } from 'react-hook-form';
 import { derivePalette } from '@/lib/derivePalette';
 import type { CreatePageInput } from '@/lib/schema';
@@ -8,18 +9,35 @@ import type { CreatePageInput } from '@/lib/schema';
 interface Props {
   code: string;
   onPreview?: () => void;
-  onAdmin?: () => void;
 }
 
 type CopyKind = 'code' | 'link' | null;
 
-export default function CreatedView({ code, onPreview, onAdmin }: Props) {
+export default function CreatedView({ code, onPreview }: Props) {
+  const router = useRouter();
   const { watch } = useFormContext<CreatePageInput>();
   const color = watch('color') || '#FF6B9D';
   const palette = useMemo(() => derivePalette(color), [color]);
   const [copied, setCopied] = useState<CopyKind>(null);
+  const [hostNickname, setHostNickname] = useState<string | null>(null);
+
+  // 호스트(로그인한 본인) 닉네임을 localStorage에서 읽어와 공유 URL에 포함
+  useEffect(() => {
+    const raw = localStorage.getItem('birthday-user');
+    if (!raw) return;
+    try {
+      const u = JSON.parse(raw) as { nickname?: string };
+      if (u.nickname) setHostNickname(u.nickname);
+    } catch {}
+  }, []);
+
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3007';
-  const url = `${SITE_URL}/${code}`;
+  const pagePath = hostNickname
+    ? `/${code}/${encodeURIComponent(hostNickname)}/happybirthday`
+    : `/${code}`;
+  const url = `${SITE_URL}${pagePath}`;
+
+  const handlePreview = onPreview ?? (() => router.push(pagePath));
 
   const copy = (kind: Exclude<CopyKind, null>, text: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -108,19 +126,15 @@ export default function CreatedView({ code, onPreview, onAdmin }: Props) {
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onPreview}
-        className="mt-3 h-[52px] w-full rounded-chip bg-kakao text-[14px] font-bold text-kakao-ink"
-      >
-        💬 카카오톡으로 공유하기
-      </button>
-
       <div className="mt-3 flex gap-2">
-        <button type="button" onClick={onPreview} className={ghostBtnClass}>
+        <button type="button" onClick={handlePreview} className={ghostBtnClass}>
           미리보기
         </button>
-        <button type="button" onClick={onAdmin} className={ghostBtnClass}>
+        <button
+          type="button"
+          disabled
+          className={`${ghostBtnClass} cursor-not-allowed opacity-40`}
+        >
           관리자 페이지
         </button>
       </div>
