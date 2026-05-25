@@ -8,8 +8,14 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
+    const connectionString = process.env.DATABASE_URL;
+    // 로컬 postgres는 SSL 없이, Render 같은 매니지드 DB는 SSL 필수
+    const isLocal = connectionString?.includes('localhost') ?? false;
     super({
-      adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+      adapter: new PrismaPg({
+        connectionString,
+        ssl: isLocal ? false : { rejectUnauthorized: false },
+      }),
     });
   }
 
