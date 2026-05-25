@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+import KebabMenu, { type KebabItem } from '@/components/KebabMenu';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
@@ -9,11 +11,22 @@ const FALLBACK_CARD_COLORS = ['#FFD6E5', '#CFE3FF', '#FFE7C2', '#C2F1E2', '#DCD2
 
 interface MessageRaw {
   id: number;
+  authorId: number;
   content: string;
   photoUrl: string | null;
   cardColor: string | null;
   createdAt: string;
   authorNickname: string;
+}
+
+interface PageMeta {
+  hostId: number;
+}
+
+interface StoredUser {
+  id: number;
+  nickname: string;
+  token: string;
 }
 
 // "방금", "5분 전" 같은 상대 시간
@@ -36,7 +49,17 @@ export default function MessagesPage() {
   const friendNickname = params?.nickname;
 
   const [messages, setMessages] = useState<MessageRaw[] | null>(null);
+  const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('birthday-user') : null;
+    if (!raw) return;
+    try {
+      setCurrentUser(JSON.parse(raw) as StoredUser);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!code) return;
@@ -47,7 +70,36 @@ export default function MessagesPage() {
       })
       .then((data: MessageRaw[]) => setMessages(data))
       .catch((e: Error) => setError(e.message));
+    fetch(`${API_BASE}/pages/${code}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: PageMeta | null) => data && setPageMeta(data))
+      .catch(() => {});
   }, [code]);
+
+  const handleEdit = async (id: number, newContent: string) => {
+    if (!code) return;
+    try {
+      const updated = await api.patch<MessageRaw>(
+        `/pages/${code}/messages/${id}`,
+        { content: newContent },
+      );
+      setMessages((prev) =>
+        prev ? prev.map((m) => (m.id === id ? { ...m, content: updated.content } : m)) : prev,
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '수정 실패');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!code) return;
+    try {
+      await api.delete(`/pages/${code}/messages/${id}`);
+      setMessages((prev) => (prev ? prev.filter((m) => m.id !== id) : prev));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 실패');
+    }
+  };
 
   const friendName = friendNickname ? decodeURIComponent(friendNickname) : '친구';
 
@@ -121,7 +173,15 @@ export default function MessagesPage() {
         {!error && messages && messages.length > 0 && (
           <div className="flex flex-col gap-2.5">
             {messages.map((m, i) => (
-              <MessageCard key={m.id} message={m} fallbackIndex={i} />
+              <MessageCard
+                key={m.id}
+                message={m}
+                fallbackIndex={i}
+                currentUserId={currentUser?.id ?? null}
+                hostId={pageMeta?.hostId ?? null}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
@@ -151,16 +211,69 @@ export default function MessagesPage() {
   );
 }
 
-// 메시지 카드 한 장 — 전체 목록용 (3줄 클램프 없음)
+// 메시지 카드 한 장 — 전체 목록용. 권한 있을 땐 ... 메뉴/인라인 수정.
 function MessageCard({
   message,
   fallbackIndex,
+  currentUserId,
+  hostId,
+  onEdit,
+  onDelete,
 }: {
   message: MessageRaw;
   fallbackIndex: number;
+  currentUserId: number | null;
+  hostId: number | null;
+  onEdit: (id: number, newContent: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }) {
   const bg =
     message.cardColor ?? FALLBACK_CARD_COLORS[fallbackIndex % FALLBACK_CARD_COLORS.length];
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+  const [busy, setBusy] = useState(false);
+
+  const canEdit = !!currentUserId && currentUserId === message.authorId;
+  const canDelete =
+    !!currentUserId &&
+    (currentUserId === message.authorId || currentUserId === hostId);
+
+  const items: KebabItem[] = [];
+  if (canEdit) {
+    items.push({
+      label: '수정',
+      onClick: () => {
+        setDraft(message.content);
+        setEditing(true);
+      },
+    });
+  }
+  if (canDelete) {
+    items.push({
+      label: '삭제',
+      danger: true,
+      onClick: async () => {
+        if (!confirm('이 축하글을 삭제할까요?')) return;
+        await onDelete(message.id);
+      },
+    });
+  }
+
+  const handleSave = async () => {
+    const trimmed = draft.trim();
+    if (trimmed.length === 0 || trimmed === message.content) {
+      setEditing(false);
+      return;
+    }
+    setBusy(true);
+    try {
+      await onEdit(message.id, trimmed);
+      setEditing(false);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div
@@ -174,9 +287,40 @@ function MessageCard({
           style={{ backgroundImage: `url(${message.photoUrl})` }}
         />
       )}
-      <p className="whitespace-pre-line break-keep text-[15px] leading-[1.55] text-ink">
-        {message.content}
-      </p>
+      {editing ? (
+        <>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.slice(0, 500))}
+            className="min-h-[100px] w-full resize-none rounded-xl border border-ink/10 bg-white/80 px-3 py-2 text-[15px] leading-[1.55] text-ink outline-none focus:border-ink/40"
+            autoFocus
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-chip bg-white/70 px-3 py-1.5 text-[12px] font-semibold text-ink"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={busy}
+              className="rounded-chip bg-ink px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+            >
+              {busy ? '저장 중…' : '저장'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <p className="flex-1 whitespace-pre-line break-keep text-[15px] leading-[1.55] text-ink">
+            {message.content}
+          </p>
+          {items.length > 0 && <KebabMenu items={items} className="-mr-1" />}
+        </div>
+      )}
       <div className="mt-2.5 flex items-center justify-between">
         <div className="text-[11px] font-bold text-ink/80">
           {message.authorNickname}

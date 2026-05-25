@@ -11,12 +11,15 @@ import GallerySection, {
   type GalleryPhoto,
 } from '@/components/main/GallerySection';
 
+import { api } from '@/lib/api';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 // 백엔드 응답 모양 (GET /pages/:code)
 interface PageData {
   id: number;
   code: string;
+  hostId: number;
   friendName: string;
   birthday: string; // ISO datetime
   greeting: string;
@@ -25,12 +28,19 @@ interface PageData {
   hostNickname: string;
 }
 
+interface StoredUser {
+  id: number;
+  nickname: string;
+  token: string;
+}
+
 // 메시지 카드 색 자동 배정용 (서버에서 cardColor 안 주면 순환 배정)
 const FALLBACK_CARD_COLORS = ['#FFD6E5', '#CFE3FF', '#FFE7C2', '#C2F1E2', '#DCD2FF', '#FFD0D6'];
 
 // 백엔드 응답 모양
 interface MessageRaw {
   id: number;
+  authorId: number;
   content: string;
   photoUrl: string | null;
   cardColor: string | null;
@@ -74,6 +84,42 @@ export default function HappyBirthdayPage() {
   const [photos, setPhotos] = useState<PhotoRaw[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
+
+  // 마운트 시 로그인된 유저 불러오기 (수정/삭제 권한 판단용)
+  useEffect(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('birthday-user') : null;
+    if (!raw) return;
+    try {
+      setCurrentUser(JSON.parse(raw) as StoredUser);
+    } catch {}
+  }, []);
+
+  // 메시지 수정/삭제 핸들러
+  const handleMessageEdit = async (id: number, newContent: string) => {
+    if (!code) return;
+    try {
+      const updated = await api.patch<MessageRaw>(
+        `/pages/${code}/messages/${id}`,
+        { content: newContent },
+      );
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, content: updated.content } : m)),
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '수정 실패');
+    }
+  };
+
+  const handleMessageDelete = async (id: number) => {
+    if (!code) return;
+    try {
+      await api.delete(`/pages/${code}/messages/${id}`);
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 실패');
+    }
+  };
 
   // 공유 버튼: 모바일이면 OS 공유 시트, 아니면 클립보드 복사 후 토스트
   const handleShare = async () => {
@@ -127,6 +173,7 @@ export default function HappyBirthdayPage() {
   // MessagesSection에 넘길 모양으로 변환
   const messageItems: MessagePreview[] = messages.map((m, i) => ({
     id: m.id,
+    authorId: m.authorId,
     name: m.authorNickname,
     text: m.content,
     cardColor: m.cardColor ?? FALLBACK_CARD_COLORS[i % FALLBACK_CARD_COLORS.length],
@@ -256,10 +303,22 @@ export default function HappyBirthdayPage() {
       </div>
 
       {/* 친구들의 축하글 (백엔드에서 최신 3개) */}
-      <MessagesSection messages={messageItems} onSeeAll={goMessages} onWrite={goWrite} />
+      <MessagesSection
+        messages={messageItems}
+        onSeeAll={goMessages}
+        onWrite={goWrite}
+        currentUserId={currentUser?.id ?? null}
+        hostId={page.hostId}
+        onEdit={handleMessageEdit}
+        onDelete={handleMessageDelete}
+      />
 
       {/* 사진 갤러리 (백엔드에서 최신 4개) */}
-      <GallerySection photos={galleryItems} onSeeAll={goGallery} />
+      <GallerySection
+        photos={galleryItems}
+        onSeeAll={goGallery}
+        onPhotoClick={(id) => router.push(`/${code}/${nickname}/gallery/${id}`)}
+      />
 
       {/* MADE BY 호스트 노트 카드 */}
       <div className="mx-6 mt-7 rounded-[10px] border border-ink/10 bg-surface px-4 py-3.5 shadow-[0_1px_0_rgba(0,0,0,0.04)]">

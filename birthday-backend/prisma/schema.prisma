@@ -21,9 +21,10 @@ model User {
   createdAt DateTime @default(now()) @db.Timestamptz
   updatedAt DateTime @updatedAt @db.Timestamptz
 
-  hostedPages    Page[]    @relation("PageHost")
-  messages       Message[] @relation("MessageAuthor")
-  uploadedPhotos Photo[]   @relation("PhotoUploader")
+  hostedPages    Page[]         @relation("PageHost")
+  messages       Message[]      @relation("MessageAuthor")
+  uploadedPhotos Photo[]        @relation("PhotoUploader")
+  photoComments  PhotoComment[] @relation("PhotoCommentAuthor")
 
   @@unique([nickname, pin]) // (닉네임, PIN) 조합이 user 식별자
 }
@@ -80,8 +81,26 @@ model Photo {
 
   createdAt DateTime @default(now()) @db.Timestamptz
 
-  page     Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  uploader User @relation("PhotoUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  page     Page           @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  uploader User           @relation("PhotoUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  comments PhotoComment[]
 
   @@index([pageId, createdAt(sort: Desc)])
+}
+
+// 갤러리 사진에 달리는 댓글
+model PhotoComment {
+  id       Int    @id @default(autoincrement())
+  photoId  Int
+  authorId Int
+  content  String @db.VarChar(300)
+
+  createdAt DateTime  @default(now()) @db.Timestamptz
+  updatedAt DateTime  @updatedAt @db.Timestamptz
+  deletedAt DateTime? @db.Timestamptz
+
+  photo  Photo @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  author User  @relation("PhotoCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([photoId, createdAt(sort: Asc)])
 }

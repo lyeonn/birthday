@@ -1,7 +1,7 @@
 'use client';
 
 export interface GalleryPhoto {
-  id: number | string;
+  id: number;
   label?: string;
   url?: string;
   tint?: string;
@@ -10,10 +10,12 @@ export interface GalleryPhoto {
 interface Props {
   photos: GalleryPhoto[]; // 미리보기 4장
   onSeeAll?: () => void;
+  /** 개별 사진 클릭 시 (상세 페이지 이동용). 없으면 onSeeAll로 fallback. */
+  onPhotoClick?: (id: number) => void;
 }
 
 // 사진 갤러리. 섹션 헤더 + 2×2 그리드 (4장) + "사진 더보기" 버튼.
-export default function GallerySection({ photos, onSeeAll }: Props) {
+export default function GallerySection({ photos, onSeeAll, onPhotoClick }: Props) {
   const previews = photos.slice(0, 4);
 
   return (
@@ -59,7 +61,7 @@ export default function GallerySection({ photos, onSeeAll }: Props) {
               <button
                 key={p.id}
                 type="button"
-                onClick={onSeeAll}
+                onClick={() => (onPhotoClick ? onPhotoClick(p.id) : onSeeAll?.())}
                 className="aspect-square overflow-hidden rounded-xl border border-line"
                 style={{
                   background: p.url

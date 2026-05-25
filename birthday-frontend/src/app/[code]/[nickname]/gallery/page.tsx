@@ -2,14 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+import KebabMenu, { type KebabItem } from '@/components/KebabMenu';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 interface PhotoRaw {
   id: number;
+  uploaderId: number;
   url: string;
   createdAt: string;
   uploaderNickname: string;
+}
+
+interface PageMeta {
+  hostId: number;
 }
 
 interface StoredUser {
@@ -25,11 +32,43 @@ export default function GalleryPage() {
   const friendNickname = params?.nickname;
 
   const [photos, setPhotos] = useState<PhotoRaw[] | null>(null);
+  const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 로그인된 유저 불러오기 (... 메뉴 권한 판단용)
+  useEffect(() => {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('birthday-user') : null;
+    if (!raw) return;
+    try {
+      setCurrentUser(JSON.parse(raw) as StoredUser);
+    } catch {}
+  }, []);
+
+  // 페이지 메타(hostId) 불러오기
+  useEffect(() => {
+    if (!code) return;
+    fetch(`${API_BASE}/pages/${code}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: PageMeta | null) => data && setPageMeta(data))
+      .catch(() => {});
+  }, [code]);
+
+  // 사진 삭제
+  const handleDelete = async (id: number) => {
+    if (!code) return;
+    if (!confirm('이 사진을 삭제할까요?')) return;
+    try {
+      await api.delete(`/pages/${code}/photos/${id}`);
+      setPhotos((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 실패');
+    }
+  };
 
   // 전체 사진 fetch
   const loadPhotos = () => {
@@ -169,22 +208,43 @@ export default function GalleryPage() {
 
         {!error && photos && photos.length > 0 && (
           <div className="flex flex-col gap-2.5">
-            {photos.map((p) => (
-              <div key={p.id} className="overflow-hidden rounded-xl border border-line">
-                <div
-                  className="aspect-[4/3] w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${p.url})` }}
-                />
-                <div className="flex items-center justify-between bg-surface px-3 py-2">
-                  <span className="text-[11px] font-bold text-ink/80">
-                    {p.uploaderNickname}
-                  </span>
-                  <span className="text-[10px] text-ink/55">
-                    {new Date(p.createdAt).toLocaleDateString('ko-KR')}
-                  </span>
+            {photos.map((p) => {
+              const canDelete =
+                !!currentUser &&
+                (currentUser.id === p.uploaderId || currentUser.id === pageMeta?.hostId);
+              const items: KebabItem[] = [];
+              if (canDelete) {
+                items.push({
+                  label: '삭제',
+                  danger: true,
+                  onClick: () => handleDelete(p.id),
+                });
+              }
+              return (
+                <div key={p.id} className="rounded-xl border border-line bg-surface">
+                  <div className="overflow-hidden rounded-t-xl">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/${code}/${friendNickname}/gallery/${p.id}`)}
+                      className="block aspect-[4/3] w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${p.url})` }}
+                      aria-label="사진 상세 보기"
+                    />
+                  </div>
+                  <div className="relative flex items-center justify-between px-3 py-2">
+                    <span className="text-[11px] font-bold text-ink/80">
+                      {p.uploaderNickname}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-ink/55">
+                        {new Date(p.createdAt).toLocaleDateString('ko-KR')}
+                      </span>
+                      {items.length > 0 && <KebabMenu items={items} />}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

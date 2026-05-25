@@ -1,6 +1,20 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
+import { AuthGuard, AuthedUser } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('pages/:code')
 export class MessageController {
@@ -16,5 +30,28 @@ export class MessageController {
   @Post('messages')
   create(@Param('code') code: string, @Body() dto: CreateMessageDto) {
     return this.messageService.create(code, dto);
+  }
+
+  // PATCH /pages/:code/messages/:id — 메시지 수정 (작성자만)
+  @UseGuards(AuthGuard)
+  @Patch('messages/:id')
+  update(
+    @Param('code') code: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMessageDto,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.messageService.update(code, id, dto, user.id);
+  }
+
+  // DELETE /pages/:code/messages/:id — 메시지 삭제 (작성자 OR 호스트)
+  @UseGuards(AuthGuard)
+  @Delete('messages/:id')
+  remove(
+    @Param('code') code: string,
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.messageService.remove(code, id, user.id);
   }
 }
