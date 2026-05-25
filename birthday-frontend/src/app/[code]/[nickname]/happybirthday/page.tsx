@@ -73,7 +73,27 @@ export default function HappyBirthdayPage() {
   const [messages, setMessages] = useState<MessageRaw[]>([]);
   const [photos, setPhotos] = useState<PhotoRaw[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [bgmOn, setBgmOn] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
+
+  // 공유 버튼: 모바일이면 OS 공유 시트, 아니면 클립보드 복사 후 토스트
+  const handleShare = async () => {
+    if (typeof window === 'undefined') return;
+    const shareUrl = window.location.href;
+    const shareData = { title: document.title, url: shareUrl };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      // 사용자가 시트 닫은 경우 등은 무시
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 1500);
+    } catch {}
+  };
 
   // 마운트 시 백엔드에서 페이지/메시지/사진 동시에 가져오기
   useEffect(() => {
@@ -147,18 +167,11 @@ export default function HappyBirthdayPage() {
 
   return (
     <main className="relative mx-auto min-h-screen w-full max-w-[480px] bg-bg pb-8 font-body text-ink">
-      {/* 상단 바: BGM 토글 + 공유 */}
-      <div className="flex items-center justify-between px-[18px] pb-1.5 pt-[54px]">
+      {/* 상단 바: 공유 */}
+      <div className="flex items-center justify-end px-[18px] pb-1.5 pt-[54px]">
         <button
           type="button"
-          onClick={() => setBgmOn((v) => !v)}
-          className="flex h-9 items-center gap-1.5 rounded-chip border border-ink/10 bg-surface px-3 text-[12px] font-semibold text-ink shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-        >
-          <span aria-hidden>{bgmOn ? '🎵' : '🔇'}</span>
-          {bgmOn ? 'BGM ON' : 'BGM OFF'}
-        </button>
-        <button
-          type="button"
+          onClick={handleShare}
           className="flex h-9 items-center justify-center rounded-chip border border-ink/10 bg-surface px-3 text-ink shadow-[0_1px_0_rgba(0,0,0,0.04)]"
           aria-label="공유"
         >
@@ -170,6 +183,11 @@ export default function HappyBirthdayPage() {
           </svg>
         </button>
       </div>
+      {shareToast && (
+        <div className="fixed inset-x-0 top-[18px] z-50 mx-auto w-fit rounded-chip bg-ink px-4 py-2 text-[12px] font-semibold text-white shadow-lg">
+          링크가 복사됐어요
+        </div>
+      )}
 
       {/* HAPPY ... BIRTHDAY 키커 */}
       <div
@@ -238,7 +256,7 @@ export default function HappyBirthdayPage() {
       </div>
 
       {/* 친구들의 축하글 (백엔드에서 최신 3개) */}
-      <MessagesSection messages={messageItems} onSeeAll={goMessages} />
+      <MessagesSection messages={messageItems} onSeeAll={goMessages} onWrite={goWrite} />
 
       {/* 사진 갤러리 (백엔드에서 최신 4개) */}
       <GallerySection photos={galleryItems} onSeeAll={goGallery} />
@@ -252,7 +270,8 @@ export default function HappyBirthdayPage() {
           MADE BY {page.hostNickname.toUpperCase()}
         </div>
         <p className="text-[13px] leading-[1.5] text-ink">
-          {page.hostNickname}이 {page.friendName}을 위해 만든 페이지예요. 친구들이 한 마디씩 남길 수 있어요!
+          <span className="font-semibold">{page.hostNickname}</span>님이{' '}
+          <span className="font-semibold">{page.friendName}</span>님을 위해 만든 페이지예요. 친구들이 한 마디씩 남길 수 있어요!
         </p>
       </div>
     </main>
