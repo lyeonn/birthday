@@ -56,6 +56,7 @@ export class PageService {
       select: {
         id: true,
         code: true,
+        hostId: true,
         friendName: true,
         birthday: true,
         greeting: true,

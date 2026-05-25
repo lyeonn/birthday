@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ export class PhotoService {
         id: true,
         url: true,
         createdAt: true,
+        uploaderId: true,
         uploader: { select: { nickname: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -69,6 +71,49 @@ export class PhotoService {
       }
       throw err;
     }
+  }
+
+  // 사진 한 장 조회 (상세 페이지용)
+  async findOne(code: string, id: number) {
+    const photo = await this.prisma.photo.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        url: true,
+        createdAt: true,
+        uploaderId: true,
+        uploader: { select: { nickname: true } },
+        page: { select: { code: true } },
+      },
+    });
+    if (!photo || photo.page.code !== code) {
+      throw new NotFoundException('사진을 찾을 수 없어요');
+    }
+    const { uploader, page: _page, ...rest } = photo;
+    void _page;
+    return { ...rest, uploaderNickname: uploader.nickname };
+  }
+
+  // 사진 삭제 — 업로더 또는 호스트
+  async remove(code: string, id: number, userId: number) {
+    const photo = await this.prisma.photo.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        uploaderId: true,
+        page: { select: { code: true, hostId: true } },
+      },
+    });
+    if (!photo || photo.page.code !== code) {
+      throw new NotFoundException('사진을 찾을 수 없어요');
+    }
+    const isUploader = photo.uploaderId === userId;
+    const isHost = photo.page.hostId === userId;
+    if (!isUploader && !isHost) {
+      throw new ForbiddenException('삭제 권한이 없어요');
+    }
+    await this.prisma.photo.delete({ where: { id } });
+    return { ok: true };
   }
 
   // Prisma FK 위반(P2003) 판별
