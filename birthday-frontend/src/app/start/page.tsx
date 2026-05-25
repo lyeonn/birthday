@@ -1,15 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-
-export const dynamic = 'force-dynamic';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 type Mode = 'register' | 'login';
 
 export default function StartPage() {
+  return (
+    <Suspense fallback={null}>
+      <StartPageInner />
+    </Suspense>
+  );
+}
+
+function StartPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // ?redirect=/some/path 으로 들어오면 가입 후 그 경로로 보냄. 없으면 /my-pages.
