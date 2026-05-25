@@ -24,10 +24,10 @@ export function getTimeLeft(birthdayISO: string | undefined | null): TimeLeft {
   const thisYearBday = new Date(now.getFullYear(), m - 1, d).getTime();
   const isToday = todayStart === thisYearBday;
 
-  // 올해 생일이 이미 지났으면 내년으로
-  let target = new Date(now.getFullYear(), m - 1, d, 0, 0, 0).getTime();
+  // 올해 생일이 이미 지났으면 0으로 (내년으로 넘기지 않음)
+  const target = new Date(now.getFullYear(), m - 1, d, 0, 0, 0).getTime();
   if (target < todayStart) {
-    target = new Date(now.getFullYear() + 1, m - 1, d, 0, 0, 0).getTime();
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false, target };
   }
 
   const diff = Math.max(0, target - now.getTime());
