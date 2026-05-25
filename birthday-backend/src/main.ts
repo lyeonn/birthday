@@ -7,8 +7,11 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // 프론트(3000)에서 백엔드(3001) 호출 가능하게 CORS 열기
-  app.enableCors({ origin: ['http://localhost:3000'], credentials: true });
+  // 프론트에서 백엔드(3001) 호출 가능하게 CORS 열기
+  app.enableCors({
+    origin: ['http://localhost:3000', 'http://localhost:3007'],
+    credentials: true,
+  });
   // DTO 클래스 데코레이터 기반 자동 검증 + 화이트리스트(허용되지 않은 필드는 제거)
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),

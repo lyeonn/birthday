@@ -5,8 +5,7 @@ import { useFormContext } from 'react-hook-form';
 import { calcNthBirthday } from '@/lib/calcNthBirthday';
 import type { CreatePageInput } from '@/lib/schema';
 
-// TODO: 환경변수로 빼기
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 export default function StepIntro() {
   const { register, watch, setValue } = useFormContext<CreatePageInput>();

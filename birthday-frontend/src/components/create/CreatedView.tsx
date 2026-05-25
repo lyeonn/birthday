@@ -18,7 +18,8 @@ export default function CreatedView({ code, onPreview, onAdmin }: Props) {
   const color = watch('color') || '#FF6B9D';
   const palette = useMemo(() => derivePalette(color), [color]);
   const [copied, setCopied] = useState<CopyKind>(null);
-  const url = `bday.cake/${code}`;
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3007';
+  const url = `${SITE_URL}/${code}`;
 
   const copy = (kind: Exclude<CopyKind, null>, text: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {

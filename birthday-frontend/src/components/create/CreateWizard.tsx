@@ -11,8 +11,7 @@ import StepColor from './StepColor';
 import StepReview from './StepReview';
 import CreatedView from './CreatedView';
 
-// TODO: 환경변수로 빼기 (NEXT_PUBLIC_API_URL)
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 const STEPS = [
   {

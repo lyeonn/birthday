@@ -33,23 +33,38 @@ export default function MessagesSection({ messages, onSeeAll }: Props) {
         </button>
       </div>
 
-      {/* 카드 리스트 */}
-      <div className="flex flex-col gap-2.5 px-[18px]">
-        {previews.map((m) => (
-          <MessageCard key={m.id} message={m} />
-        ))}
+      {/* 카드 리스트 or 빈 상태 */}
+      <div className="px-[18px]">
+        {previews.length === 0 ? (
+          <div className="rounded-2xl border border-line bg-surface px-5 py-8 text-center">
+            <div className="mb-1.5 text-[22px]">💌</div>
+            <p className="text-[13px] leading-[1.55] text-sub">
+              아직 축하글이 없어요
+              <br />
+              첫 번째 축하의 주인공이 되어보세요
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {previews.map((m) => (
+              <MessageCard key={m.id} message={m} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 더보기 버튼 */}
-      <div className="px-[18px] pt-3">
-        <button
-          type="button"
-          onClick={onSeeAll}
-          className="h-12 w-full rounded-chip border-[1.5px] border-ink/15 bg-surface text-[13px] font-semibold text-ink"
-        >
-          축하글 더보기
-        </button>
-      </div>
+      {/* 더보기 버튼 — 메시지 있을 때만 */}
+      {previews.length > 0 && (
+        <div className="px-[18px] pt-3">
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="h-12 w-full rounded-chip border-[1.5px] border-ink/15 bg-surface text-[13px] font-semibold text-ink"
+          >
+            축하글 더보기
+          </button>
+        </div>
+      )}
     </section>
   );
 }

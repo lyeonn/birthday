@@ -10,14 +10,20 @@ interface Props {
 
 // 카운트다운 큰 블록. 1초마다 갱신. 생일 당일이면 D-DAY 큰 텍스트로 전환.
 export default function CountdownSection({ birthdayISO, accentColor }: Props) {
-  // 1초마다 리렌더링하려고 tick 카운터
+  // 서버 SSR 시점과 클라이언트 hydration 시점의 new Date()가 달라서 hydration mismatch가 남.
+  // mount 전엔 자리만 잡아두고, mount 후에 진짜 값으로 채움.
+  const [mounted, setMounted] = useState(false);
   const [, setTick] = useState(0);
   useEffect(() => {
+    setMounted(true);
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const time = getTimeLeft(birthdayISO);
+  // 마운트 전엔 모두 0으로 placeholder
+  const time = mounted
+    ? getTimeLeft(birthdayISO)
+    : { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false, target: 0 };
 
   // 생일 당일이면 카운트다운 자리에 "D-DAY" 큰 텍스트
   if (time.isPast) {

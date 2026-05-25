@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { calcNthBirthday } from '@/lib/calcNthBirthday';
 import CountdownSection from '@/components/main/CountdownSection';
 import MessagesSection, {
@@ -11,48 +11,139 @@ import GallerySection, {
   type GalleryPhoto,
 } from '@/components/main/GallerySection';
 
-// 백엔드 연결 전 mock. URL의 nickname을 friend.name으로 덮어써서 라우트 동작 확인.
-const MOCK_FRIEND = {
-  birthday: '2001-05-08',
-  greeting: '{name}의 25번째 생일을\n다 같이 축하해요',
-  hostName: '민지',
-  photoUrl: undefined as string | undefined,
-  color: '#FF6B9D',
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
-const MOCK_MESSAGES: MessagePreview[] = [
-  { id: 1, name: '민지', cardColor: '#FFD6E5', text: '지수야 생일 진짜 진짜 축하해!! 우리 만난지 벌써 7년째라니… 매년 너랑 케이크 자르는 게 너무 행복해. 올해도 좋은 일만 가득하길 ☺️', time: '2시간 전' },
-  { id: 2, name: '준호', cardColor: '#CFE3FF', text: '생일 축하한다 친구야. 항상 응원해!', time: '5시간 전' },
-  { id: 3, name: '서연', cardColor: '#FFE7C2', text: '지수야 생일축하해!!!!! 너 만나서 진짜 행운이야. 이번 주말에 케이크 사줄게 🎂', time: '어제' },
-];
+// 백엔드 응답 모양 (GET /pages/:code)
+interface PageData {
+  id: number;
+  code: string;
+  friendName: string;
+  birthday: string; // ISO datetime
+  greeting: string;
+  color: string;
+  photoUrl: string | null;
+  hostNickname: string;
+}
 
-const MOCK_PHOTOS: GalleryPhoto[] = [
-  { id: 0, label: '졸업식',   tint: '#FFD6E5' },
-  { id: 1, label: '카페',     tint: '#CFE3FF' },
-  { id: 2, label: '생일파티', tint: '#FFE7C2' },
-  { id: 3, label: '바다',     tint: '#C2F1E2' },
-  { id: 4, label: '셀카',     tint: '#DCD2FF' },
-  { id: 5, label: '데일리',   tint: '#FFD0D6' },
-];
+// 메시지 카드 색 자동 배정용 (서버에서 cardColor 안 주면 순환 배정)
+const FALLBACK_CARD_COLORS = ['#FFD6E5', '#CFE3FF', '#FFE7C2', '#C2F1E2', '#DCD2FF', '#FFD0D6'];
+
+// 백엔드 응답 모양
+interface MessageRaw {
+  id: number;
+  content: string;
+  photoUrl: string | null;
+  cardColor: string | null;
+  createdAt: string;
+  authorNickname: string;
+}
+
+interface PhotoRaw {
+  id: number;
+  url: string;
+  createdAt: string;
+  uploaderNickname: string;
+}
+
+// 작성 시간 → "방금", "5분 전", "어제" 같은 상대 시간
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}일 전`;
+  return new Date(iso).toLocaleDateString('ko-KR');
+}
 
 export default function HappyBirthdayPage() {
-  // URL에서 code와 nickname 추출 (한글 자동 디코드)
+  const router = useRouter();
   const params = useParams<{ code: string; nickname: string }>();
-  const code = params?.code ?? 'TEST';
-  const nickname = params?.nickname ?? '친구';
+  const code = params?.code;
+  const nickname = params?.nickname;
 
-  // TODO: 백엔드 붙으면 code로 GET /pages/:code 호출 (nickname은 표시용)
-  const friend = {
-    ...MOCK_FRIEND,
-    name: nickname,
-    greeting: MOCK_FRIEND.greeting.replace('{name}', nickname),
-  };
-  const messages = MOCK_MESSAGES;
-  const photos = MOCK_PHOTOS;
+  // 라우팅 헬퍼
+  const goWrite = () => router.push(`/${code}/${nickname}/write`);
+  const goMessages = () => router.push(`/${code}/${nickname}/messages`);
+  const goGallery = () => router.push(`/${code}/${nickname}/gallery`);
 
-  const nth = calcNthBirthday(friend.birthday);
-  const accent = friend.color;
+  const [page, setPage] = useState<PageData | null>(null);
+  const [messages, setMessages] = useState<MessageRaw[]>([]);
+  const [photos, setPhotos] = useState<PhotoRaw[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [bgmOn, setBgmOn] = useState(false);
+
+  // 마운트 시 백엔드에서 페이지/메시지/사진 동시에 가져오기
+  useEffect(() => {
+    if (!code) return;
+
+    // 페이지 본체
+    fetch(`${API_BASE}/pages/${code}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 404) throw new Error('페이지를 찾을 수 없어요');
+          throw new Error('페이지를 불러오지 못했어요');
+        }
+        return res.json();
+      })
+      .then((data: PageData) => setPage(data))
+      .catch((e: Error) => setError(e.message));
+
+    // 축하글 최신 3개
+    fetch(`${API_BASE}/pages/${code}/messages`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: MessageRaw[]) => setMessages(data))
+      .catch(() => setMessages([]));
+
+    // 갤러리 사진 최신 4개
+    fetch(`${API_BASE}/pages/${code}/photos`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: PhotoRaw[]) => setPhotos(data))
+      .catch(() => setPhotos([]));
+  }, [code]);
+
+  // MessagesSection에 넘길 모양으로 변환
+  const messageItems: MessagePreview[] = messages.map((m, i) => ({
+    id: m.id,
+    name: m.authorNickname,
+    text: m.content,
+    cardColor: m.cardColor ?? FALLBACK_CARD_COLORS[i % FALLBACK_CARD_COLORS.length],
+    time: relativeTime(m.createdAt),
+  }));
+
+  // GallerySection에 넘길 모양으로 변환
+  const galleryItems: GalleryPhoto[] = photos.map((p) => ({
+    id: p.id,
+    url: p.url,
+    label: p.uploaderNickname,
+  }));
+
+  // 에러 상태
+  if (error) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center bg-bg px-6 text-center font-body text-ink">
+        <div className="mb-2 font-display text-[20px] font-bold">{error}</div>
+        <p className="text-[13px] text-sub">코드를 다시 확인해주세요.</p>
+      </main>
+    );
+  }
+
+  // 로딩 상태
+  if (!page) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center bg-bg font-body text-ink">
+        <div className="font-mono text-[12px] text-sub">불러오는 중…</div>
+      </main>
+    );
+  }
+
+  // birthday는 ISO datetime이라 YYYY-MM-DD로 자르기
+  const birthdayISO = page.birthday.slice(0, 10);
+  const nth = calcNthBirthday(birthdayISO);
+  const accent = page.color;
+  const hasPhoto = !!page.photoUrl;
 
   return (
     <main className="relative mx-auto min-h-screen w-full max-w-[480px] bg-bg pb-8 font-body text-ink">
@@ -85,7 +176,7 @@ export default function HappyBirthdayPage() {
         className="mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em]"
         style={{ color: accent }}
       >
-        HAPPY {nth ? `${nth}TH ` : ''}BIRTHDAY · {friend.name.toUpperCase()}
+        HAPPY {nth ? `${nth}TH ` : ''}BIRTHDAY · {page.friendName.toUpperCase()}
       </div>
 
       {/* 친구 원형 사진 (회전 점선 외곽) */}
@@ -93,13 +184,13 @@ export default function HappyBirthdayPage() {
         <div
           className="flex h-full w-full items-center justify-center rounded-full font-mono text-[11px] uppercase tracking-[0.05em] text-ink/60"
           style={{
-            background: friend.photoUrl
-              ? `url(${friend.photoUrl}) center/cover`
+            background: hasPhoto
+              ? `url(${page.photoUrl}) center/cover`
               : `repeating-linear-gradient(45deg, ${accent}22, ${accent}22 8px, ${accent}11 8px, ${accent}11 16px)`,
-            border: friend.photoUrl ? undefined : `1px dashed ${accent}66`,
+            border: hasPhoto ? undefined : `1px dashed ${accent}66`,
           }}
         >
-          {!friend.photoUrl && `${friend.name} 사진`}
+          {!hasPhoto && `${page.friendName} 사진`}
         </div>
         {/* 회전 점선 외곽 */}
         <div
@@ -110,16 +201,17 @@ export default function HappyBirthdayPage() {
 
       {/* 축하 문구 */}
       <p className="mx-6 mt-6 whitespace-pre-line text-center font-display text-[26px] font-bold leading-[1.25] tracking-[-0.02em] text-ink">
-        {friend.greeting}
+        {page.greeting}
       </p>
 
       {/* 카운트다운 */}
-      <CountdownSection birthdayISO={friend.birthday} accentColor={accent} />
+      <CountdownSection birthdayISO={birthdayISO} accentColor={accent} />
 
       {/* 축하 메시지 남기기 CTA */}
       <div className="mx-[18px] mt-7">
         <button
           type="button"
+          onClick={goWrite}
           className="flex h-16 w-full items-center gap-3 rounded-[10px] px-[18px] text-left text-white"
           style={{ background: accent, boxShadow: `0 10px 24px -10px ${accent}` }}
         >
@@ -138,18 +230,18 @@ export default function HappyBirthdayPage() {
               축하 메시지 남기기
             </span>
             <span className="mt-0.5 block text-[11px] opacity-70">
-              {friend.name}에게 한 마디
+              {page.friendName}에게 한 마디
             </span>
           </span>
           <span className="opacity-40">→</span>
         </button>
       </div>
 
-      {/* 친구들의 축하글 */}
-      <MessagesSection messages={messages} />
+      {/* 친구들의 축하글 (백엔드에서 최신 3개) */}
+      <MessagesSection messages={messageItems} onSeeAll={goMessages} />
 
-      {/* 사진 갤러리 */}
-      <GallerySection photos={photos} />
+      {/* 사진 갤러리 (백엔드에서 최신 4개) */}
+      <GallerySection photos={galleryItems} onSeeAll={goGallery} />
 
       {/* MADE BY 호스트 노트 카드 */}
       <div className="mx-6 mt-7 rounded-[10px] border border-ink/10 bg-surface px-4 py-3.5 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
@@ -157,16 +249,11 @@ export default function HappyBirthdayPage() {
           className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em]"
           style={{ color: accent }}
         >
-          MADE BY {friend.hostName.toUpperCase()}
+          MADE BY {page.hostNickname.toUpperCase()}
         </div>
         <p className="text-[13px] leading-[1.5] text-ink">
-          {friend.hostName}이 {friend.name}을 위해 만든 페이지예요. 친구들이 한 마디씩 남길 수 있어요!
+          {page.hostNickname}이 {page.friendName}을 위해 만든 페이지예요. 친구들이 한 마디씩 남길 수 있어요!
         </p>
-      </div>
-
-      {/* 디버그용 — 백엔드 연결 후 제거 */}
-      <div className="mt-6 text-center font-mono text-[10px] text-ink/40">
-        code: {code}
       </div>
     </main>
   );
