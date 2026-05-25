@@ -88,7 +88,7 @@ function MessageCard({ message }: { message: MessagePreview }) {
     >
       {/* 본문 — 3줄 클램프 */}
       <p
-        className="break-keep text-[13px] leading-[1.55] text-ink"
+        className="break-keep text-[15px] leading-[1.55] text-ink"
         style={{
           display: '-webkit-box',
           WebkitLineClamp: 3,

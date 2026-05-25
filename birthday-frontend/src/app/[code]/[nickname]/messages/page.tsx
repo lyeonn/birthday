@@ -174,7 +174,7 @@ function MessageCard({
           style={{ backgroundImage: `url(${message.photoUrl})` }}
         />
       )}
-      <p className="whitespace-pre-line break-keep text-[13px] leading-[1.55] text-ink">
+      <p className="whitespace-pre-line break-keep text-[15px] leading-[1.55] text-ink">
         {message.content}
       </p>
       <div className="mt-2.5 flex items-center justify-between">
