@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 const FALLBACK_CARD_COLORS = ['#FFD6E5', '#CFE3FF', '#FFE7C2', '#C2F1E2', '#DCD2FF', '#FFD0D6'];
 

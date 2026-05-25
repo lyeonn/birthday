@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-// TODO: 환경변수로 빼기
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 const MAX_CONTENT = 500;
 
 interface StoredUser {

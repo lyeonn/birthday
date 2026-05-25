@@ -11,8 +11,7 @@ import GallerySection, {
   type GalleryPhoto,
 } from '@/components/main/GallerySection';
 
-// TODO: 환경변수로 빼기
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 // 백엔드 응답 모양 (GET /pages/:code)
 interface PageData {

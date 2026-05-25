@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-// TODO: 환경변수로 빼기 (NEXT_PUBLIC_API_URL)
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001';
 
 type Mode = 'register' | 'login';
 
@@ -171,22 +170,13 @@ export default function StartPage() {
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-cta bg-ink text-[15px] font-semibold tracking-[-0.01em] text-white transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-25"
+            className="flex h-14 w-full items-center justify-center rounded-cta bg-ink text-[15px] font-semibold tracking-[-0.01em] text-white disabled:cursor-not-allowed"
           >
             {submitting
               ? '잠시만요…'
               : mode === 'register'
                 ? '가입하고 계속'
                 : '로그인하고 계속'}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M5 12h14m-6-6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
           </button>
         </div>
       </div>

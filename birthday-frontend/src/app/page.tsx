@@ -1,101 +1,82 @@
-import Image from "next/image";
+import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-bg px-6 pb-10 pt-[72px] font-body text-ink">
+      <div className="font-mono text-[11px] font-bold tracking-[0.18em] text-sub">
+        BIRTHDAY · FOR A FRIEND
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <h1 className="mt-3 whitespace-pre-line font-display text-[34px] font-bold leading-[1.2] tracking-[-0.025em] text-ink">
+        {'친구 생일,\n페이지로 선물해요'}
+      </h1>
+      <p className="mt-3 text-[14px] leading-[1.55] text-sub">
+        카운트다운, 축하 메시지, 사진까지 한 장에. 링크 하나로 친구에게 보내요.
+      </p>
+
+      <ul className="mt-10 flex flex-col gap-3">
+        <FeatureRow
+          k="01"
+          title="D-DAY 카운트다운"
+          desc="생일까지 남은 시간을 큼직하게"
+        />
+        <FeatureRow
+          k="02"
+          title="축하 메시지 모음"
+          desc="친구들이 한마디씩 남길 수 있어요"
+        />
+        <FeatureRow
+          k="03"
+          title="사진 갤러리"
+          desc="추억 사진을 함께 담아요"
+        />
+      </ul>
+
+      <div className="mt-auto flex flex-col gap-3 pt-12">
+        <Link
+          href="/start"
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-cta bg-ink text-[15px] font-semibold tracking-[-0.01em] text-white transition-opacity duration-150 hover:opacity-90"
+        >
+          내 생일 페이지 만들기
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M5 12h14m-6-6l6 6-6 6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          </svg>
+        </Link>
+        <Link
+          href="/start"
+          className="text-center text-[13px] text-sub underline-offset-4 hover:underline"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          이미 만들어 봤어요 · 로그인
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+function FeatureRow({
+  k,
+  title,
+  desc,
+}: {
+  k: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <li className="flex items-start gap-4 rounded-field border-[1.5px] border-line bg-surface px-4 py-4">
+      <span className="mt-0.5 font-mono text-[11px] font-bold tracking-[0.18em] text-sub">
+        {k}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold text-ink">{title}</span>
+        <span className="mt-1 block text-[12px] leading-[1.5] text-sub">{desc}</span>
+      </span>
+    </li>
   );
 }
