@@ -42,6 +42,7 @@ model Page {
   birthday   DateTime @db.Date
   greeting   String   @db.VarChar(60)
   color      String   @db.Char(7)
+  theme      String   @default("minimal") @db.VarChar(20)
   photoUrl   String?
 
   createdAt DateTime @default(now()) @db.Timestamptz

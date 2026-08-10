@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFormContext } from 'react-hook-form';
-import { derivePalette } from '@/lib/derivePalette';
+import { getPageTheme } from '@/lib/themes';
 import type { CreatePageInput } from '@/lib/schema';
 
 interface Props {
@@ -17,7 +17,8 @@ export default function CreatedView({ code, onPreview }: Props) {
   const router = useRouter();
   const { watch } = useFormContext<CreatePageInput>();
   const color = watch('color') || '#FF6B9D';
-  const palette = useMemo(() => derivePalette(color), [color]);
+  const theme = watch('theme') || 'minimal';
+  const t = useMemo(() => getPageTheme(theme, color), [theme, color]);
   const [copied, setCopied] = useState<CopyKind>(null);
   const [hostNickname, setHostNickname] = useState<string | null>(null);
 
@@ -50,9 +51,9 @@ export default function CreatedView({ code, onPreview }: Props) {
   return (
     <div
       className="relative mx-auto min-h-screen w-full max-w-[480px] bg-bg px-5 pb-8 pt-[80px] text-ink font-body"
-      style={{ background: palette.softBg }}
+      style={{ background: t.pageBg }}
     >
-      <Confetti count={40} colors={[color, '#FFB84D', '#5AA9FF', '#1B1B1F']} />
+      <Confetti count={40} colors={t.confetti} />
 
       <div className="relative z-[1] text-center">
         <div className="mb-[18px] inline-flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white">

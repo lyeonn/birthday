@@ -10,6 +10,7 @@ import MessagesSection, {
 import GallerySection, {
   type GalleryPhoto,
 } from '@/components/main/GallerySection';
+import { getPageTheme } from '@/lib/themes';
 
 import { api } from '@/lib/api';
 
@@ -24,6 +25,7 @@ interface PageData {
   birthday: string; // ISO datetime
   greeting: string;
   color: string;
+  theme: string;
   photoUrl: string | null;
   hostNickname: string;
 }
@@ -209,11 +211,15 @@ export default function HappyBirthdayPage() {
   // birthday는 ISO datetime이라 YYYY-MM-DD로 자르기
   const birthdayISO = page.birthday.slice(0, 10);
   const nth = calcNthBirthday(birthdayISO);
-  const accent = page.color;
+  const t = getPageTheme(page.theme, page.color);
+  const accent = t.accent;
   const hasPhoto = !!page.photoUrl;
 
   return (
-    <main className="relative mx-auto min-h-screen w-full max-w-[480px] bg-bg pb-8 font-body text-ink">
+    <main
+      className="relative mx-auto min-h-screen w-full max-w-[480px] bg-bg pb-8 font-body text-ink"
+      style={{ background: t.pageBg }}
+    >
       {/* 상단 바: 공유 */}
       <div className="flex items-center justify-end px-[18px] pb-1.5 pt-[54px]">
         <button
@@ -260,12 +266,15 @@ export default function HappyBirthdayPage() {
         {/* 회전 점선 외곽 */}
         <div
           className="pointer-events-none absolute -inset-2.5 animate-spin-slow rounded-full"
-          style={{ border: `2px dashed ${accent}77` }}
+          style={{ border: `2px dashed ${t.ringColor}` }}
         />
       </div>
 
       {/* 축하 문구 */}
-      <p className="mx-6 mt-6 whitespace-pre-line text-center font-display text-[26px] font-bold leading-[1.25] tracking-[-0.02em] text-ink">
+      <p
+        className="mx-6 mt-6 whitespace-pre-line text-center font-display text-[26px] font-bold leading-[1.25] tracking-[-0.02em]"
+        style={{ color: t.heroInk }}
+      >
         {page.greeting}
       </p>
 
@@ -277,8 +286,8 @@ export default function HappyBirthdayPage() {
         <button
           type="button"
           onClick={goWrite}
-          className="flex h-16 w-full items-center gap-3 rounded-[10px] px-[18px] text-left text-white"
-          style={{ background: accent, boxShadow: `0 10px 24px -10px ${accent}` }}
+          className="flex h-16 w-full items-center gap-3 rounded-[10px] px-[18px] text-left"
+          style={{ background: accent, color: t.onAccent, boxShadow: t.ctaShadow }}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
