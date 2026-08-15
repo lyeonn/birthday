@@ -26,8 +26,8 @@ const STEPS = [
   },
   {
     kicker: 'STEP 03',
-    title: '대표 색을 골라주세요',
-    sub: '색 하나로 페이지 전체 톤이 만들어져요',
+    title: '어떤 느낌으로\n꾸며볼까요?',
+    sub: '테마를 고르면 페이지 전체 분위기가 정해져요',
   },
   {
     kicker: 'STEP 04',
@@ -57,6 +57,7 @@ export default function CreateWizard() {
       birthday: '',
       greeting: '',
       color: '#FF6B9D',
+      theme: 'minimal',
     },
   });
 
@@ -120,6 +121,7 @@ export default function CreateWizard() {
           birthday: v.birthday,
           greeting: v.greeting,
           color: v.color,
+          theme: v.theme,
           photoUrl: v.photoUrl,
         }),
       });

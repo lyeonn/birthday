@@ -33,6 +33,12 @@ export class CreatePageDto {
   @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'color must be #RRGGBB hex' })
   color!: string;
 
+  // 페이지 디자인 테마 id (minimal / candy / sunset ...). 없으면 minimal.
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  theme?: string;
+
   // 친구 대표 사진 (선택)
   @IsOptional()
   @IsString()

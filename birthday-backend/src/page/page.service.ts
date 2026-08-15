@@ -28,6 +28,7 @@ export class PageService {
             birthday: new Date(dto.birthday), // "YYYY-MM-DD" → Date
             greeting: dto.greeting,
             color: dto.color,
+            theme: dto.theme ?? 'minimal',
             photoUrl: dto.photoUrl,
           },
         });
@@ -61,6 +62,7 @@ export class PageService {
         birthday: true,
         greeting: true,
         color: true,
+        theme: true,
         photoUrl: true,
         createdAt: true,
         host: { select: { nickname: true } }, // MADE BY 카드용

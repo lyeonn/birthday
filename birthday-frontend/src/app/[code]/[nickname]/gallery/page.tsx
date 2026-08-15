@@ -87,10 +87,10 @@ export default function GalleryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
-  // 사진 추가 핸들러 (업로드 → POST /photos → 목록 새로고침)
+  // 사진 추가 핸들러 (여러 장 업로드 → POST /photos → 목록 새로고침)
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !code) return;
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0 || !code) return;
 
     // user 체크 — 없으면 /start로 (다시 돌아오게 redirect 박음)
     const raw = localStorage.getItem('birthday-user');
@@ -104,27 +104,32 @@ export default function GalleryPage() {
     setUploading(true);
     setUploadError(null);
     try {
-      // 1) 파일 업로드 → URL 받기
+      // 1) 파일들 업로드 → URL 배열 받기
       const form = new FormData();
-      form.append('file', file);
-      const upRes = await fetch(`${API_BASE}/upload`, { method: 'POST', body: form });
+      files.forEach((file) => form.append('files', file));
+      const upRes = await fetch(`${API_BASE}/upload/multiple`, {
+        method: 'POST',
+        body: form,
+      });
       if (!upRes.ok) {
         const body = await upRes.json().catch(() => ({}));
         setUploadError(body.message ?? '사진 업로드 실패');
         return;
       }
-      const { url } = await upRes.json();
+      const { urls } = (await upRes.json()) as { urls: string[] };
 
-      // 2) 갤러리에 등록
-      const regRes = await fetch(`${API_BASE}/pages/${code}/photos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploaderId: user.id, url }),
-      });
-      if (!regRes.ok) {
-        const body = await regRes.json().catch(() => ({}));
-        setUploadError(body.message ?? '갤러리 등록 실패');
-        return;
+      // 2) 갤러리에 순서대로 등록
+      for (const url of urls) {
+        const regRes = await fetch(`${API_BASE}/pages/${code}/photos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uploaderId: user.id, url }),
+        });
+        if (!regRes.ok) {
+          const body = await regRes.json().catch(() => ({}));
+          setUploadError(body.message ?? '갤러리 등록 실패');
+          break;
+        }
       }
 
       // 3) 목록 새로고침
@@ -260,6 +265,7 @@ export default function GalleryPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileChange}
         className="hidden"
       />

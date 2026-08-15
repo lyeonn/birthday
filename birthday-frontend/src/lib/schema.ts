@@ -17,6 +17,8 @@ export const createPageSchema = z.object({
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, '올바른 색상 코드가 아니에요'),
+  // 디자인 테마 id (minimal / candy / sunset ...)
+  theme: z.string().min(1),
   // 사진은 클라이언트에서 File로 받고, 업로드 후 photoUrl로 변환해서 백엔드에 전달
   photoUrl: z.string().optional(),
 });
