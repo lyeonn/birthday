@@ -1,4 +1,4 @@
-import 'dotenv/config'; // .env 로딩 (DATABASE_URL, CLOUDINARY_URL 등)
+import 'dotenv/config'; // .env 로딩 (DATABASE_URL, AWS_* 등)
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
